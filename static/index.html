@@ -31,12 +31,12 @@
 <body>
     <div id="container">
         <!-- Browser base64 Session Description -->
-        <label for="localSessionDescription">Browser base64 Session Description:</label><br />
+        <label for="localSessionDescription">Browser base64 SDP Offer:</label><br />
         <textarea id="localSessionDescription" readonly="true"></textarea><br />
-        <button onclick="copySDP()">Copy browser SDP to clipboard</button><br /><br />
+        <button onclick="copySDP()">Copy browser SDP Offer to clipboard</button><br /><br />
 
         <!-- Golang base64 Session Description -->
-        <label for="remoteSessionDescription">Golang base64 Session Description:</label><br />
+        <label for="remoteSessionDescription">Other peer base64 SDP Answer:</label><br />
         <textarea id="remoteSessionDescription"></textarea><br />
         <button onclick="startSession()">Start Session</button><br /><br />
 
