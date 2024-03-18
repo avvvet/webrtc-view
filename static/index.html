@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WebRTC view - testing</title>
+<title>WebRTC Demo</title>
 <style>
     h1 {
         color: blue;
@@ -30,19 +30,23 @@
 </head>
 <body>
     <div id="container">
-        <label for="localSessionDescription">Browser base64 SDP Offer:</label><br />
+        <!-- Browser base64 Session Description -->
+        <label for="localSessionDescription">Browser base64 Session Description:</label><br />
         <textarea id="localSessionDescription" readonly="true"></textarea><br />
-        <button onclick="copySDP()">Copy browser SDP Offer to clipboard</button><br /><br />
+        <button onclick="copySDP()">Copy browser SDP to clipboard</button><br /><br />
 
-        <label for="remoteSessionDescription">Peer base64 SDP Answer:</label><br />
+        <!-- Golang base64 Session Description -->
+        <label for="remoteSessionDescription">Golang base64 Session Description:</label><br />
         <textarea id="remoteSessionDescription"></textarea><br />
         <button onclick="startSession()">Start Session</button><br /><br />
 
+        <!-- Video -->
         <label for="remoteVideos">Video:</label><br />
         <div id="remoteVideos"></div><br />
 
+        <!-- Logs -->
         <label for="logs">Logs:</label><br />
-        <div id="logs"></div>
+        <div id="logs">Please wait...</div>
     </div>
 
     <script>
@@ -55,7 +59,12 @@
         });
 
         const log = msg => {
-        document.getElementById('logs').innerHTML += msg + '<br>';
+        document.getElementById('logs').innerHTML = msg + '<br>';
+        };
+
+        // Show "Please wait..." message on page load
+        window.onload = () => {
+            log('Please wait...');
         };
 
         navigator.mediaDevices.getUserMedia({ video: true, audio: true })
@@ -70,9 +79,10 @@
         pc.oniceconnectionstatechange = e => log(pc.iceConnectionState);
 
         pc.onicecandidate = event => {
-        if (event.candidate === null) {
-            document.getElementById('localSessionDescription').value = btoa(JSON.stringify(pc.localDescription));
-        }
+            if (event.candidate === null) {
+                document.getElementById('localSessionDescription').value = btoa(JSON.stringify(pc.localDescription));
+                log('SDP offer ready');
+            }
         };
 
         pc.ontrack = function(event) {
