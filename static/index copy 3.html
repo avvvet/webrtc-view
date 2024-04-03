@@ -61,7 +61,7 @@
         <p id='err'></p>
 
         <hr />
-        <p id="logs"></p>
+        <p id="logs">Please wait...</p>
     </div>
     
 
@@ -153,17 +153,13 @@
         };
 
         pc.ontrack = function(e) {
-            const streamId = e.streams[0].id;
-            log('🟢 Remote Stream ID: ' + streamId);
-            console.log(e.streams[0])
-            
             const el = document.createElement(e.track.kind);
             el.srcObject = e.streams[0];
             el.autoplay = true;
             el.controls = false;
 
             document.getElementById('remoteVideos').appendChild(el);
-            log('🟢 on video call');
+            log('🟢 ' + pc.iceConnectionState + ' : on video call');
         };
 
         function startSession() {
