@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebRTC Demo</title>
+<style>
+    h1 {
+        color: blue;
+        font-family: verdana;
+        font-size: 300%;
+    }
+    body {
+        background : #99e1d9;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+    }
+    #container {
+        padding: 40px;a
+    }
+    textarea {
+        width: 300px;
+        min-height: 75px;
+        margin: 10px
+    }
+</style>
+</head>
+<body>
+    <div id="container">
+        <!-- Browser base64 Session Description -->
+        <div>Browser base64 SDP Offer:</div>
+        <textarea id="localSessionDescription" readonly="true"></textarea><br />
+        <button onclick="copySDP()">Copy browser SDP Offer to clipboard</button><br /><br />
+
+        <!-- Golang base64 Session Description -->
+        <div>Other peer base64 SDP Answer:</div>
+        <textarea id="remoteSessionDescription"></textarea><br />
+        <button onclick="startSession()">Start Session</button><br /><br />
+
+        <!-- Video -->
+        <div>Video:</div><br />
+        <div id="remoteVideos"></div><br />
+
+        <!-- Logs -->
+        <div>Logs:</div><br />
+        <div id="logs">Please wait...</div>
+    </div>
+
+    <script>
+        const pc = new RTCPeerConnection({
+            iceServers: [
+                {
+                    urls: "turn:68.183.156.88:3478",
+                    username: "webrtcwire",
+                    credential: "kLddkeokdkuyewertYYEKgqWWWSbv",
+                },
+            ],
+        });
+
+        const log = msg => {
+        document.getElementById('logs').innerHTML = msg + '<br>';
+        };
+
+        // Show "Please wait..." message on page load
+        window.onload = () => {
+            log('Please wait...');
+        };
+
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+            pc.createOffer()
+            .then(d => pc.setLocalDescription(d))
+            .catch(log);
+        })
+        .catch(log);
+
+        pc.oniceconnectionstatechange = e => log(pc.iceConnectionState);
+
+        pc.onicecandidate = event => {
+            if (event.candidate === null) {
+                document.getElementById('localSessionDescription').value = btoa(JSON.stringify(pc.localDescription));
+                log('SDP offer ready');
+            }
+        };
+
+        pc.ontrack = function(event) {
+            const el = document.createElement(event.track.kind);
+            el.srcObject = event.streams[0];
+            el.autoplay = true;
+            el.controls = true;
+
+            document.getElementById('remoteVideos').appendChild(el);
+        };
+
+        function startSession() {
+            const sd = document.getElementById('remoteSessionDescription').value;
+            if (sd === '') {
+                return alert('Session Description must not be empty');
+            }
+
+            try {
+                pc.setRemoteDescription(JSON.parse(atob(sd)));
+            } catch (e) {
+                alert(e);
+            }
+        }
+
+        function copySDP() {
+            const browserSDP = document.getElementById('localSessionDescription');
+
+            browserSDP.focus();
+            browserSDP.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                const msg = successful ? 'successful' : 'unsuccessful';
+                log('Copying SDP was ' + msg);
+            } catch (err) {
+                log('Unable to copy SDP ' + err);
+            }
+        }
+    </script>
+
+</body>
+</html>

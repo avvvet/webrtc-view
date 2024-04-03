@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WebRTC Demo</title>
+<title>webrtc wire</title>
 <style>
     h1 {
         color: blue;
         font-family: verdana;
-        font-size: 300%;
+        {{/* font-size: 300%; */}}
     }
     body {
         background : #99e1d9;
@@ -20,53 +20,85 @@
         height: 100vh;
     }
     #container {
-        text-align: center;
         padding: 40px;
+    }
+    #remoteVideos {
+        margin: 10px;
+        padding: 10px;
     }
     textarea {
         width: 300px;
         min-height: 75px;
-        margin: 40px
+        margin: 10px
+    }
+    div {
+        margin: 10px;
     }
 </style>
-</head>
 <body>
+
     <div id="container">
-        <!-- Browser base64 Session Description -->
-        <label for="localSessionDescription">Browser base64 SDP Offer:</label><br />
-        <textarea id="localSessionDescription" readonly="true"></textarea><br />
-        <button onclick="copySDP()">Copy browser SDP Offer to clipboard</button><br /><br />
+        <div id="remoteVideos"></div>
+        
+        <textarea id="sdpOffer" readonly="true"></textarea>
+        
+        <textarea id="sdpAnswer"></textarea>
 
-        <!-- Golang base64 Session Description -->
-        <label for="remoteSessionDescription">Other peer base64 SDP Answer:</label><br />
-        <textarea id="remoteSessionDescription"></textarea><br />
-        <button onclick="startSession()">Start Session</button><br /><br />
+        <div>
+            <button onclick="startSession()">Start Session</button>
+        </div>
+        
+        <h1>Ice Servers status</h1>
+        <hr />
 
-        <!-- Video -->
-        <label for="remoteVideos">Video:</label><br />
-        <div id="remoteVideos"></div><br />
+        <pre id='ice' style='overflow: auto'></pre>
 
-        <!-- Logs -->
-        <label for="logs">Logs:</label><br />
-        <div id="logs">Please wait...</div>
+        <hr />
+
+        <p id='ip'></p>
+        <p id='stun'>🔴 The STUN server is NOT reachable!</p>
+        <p id='turn'>🔴 The TURN server is NOT reachable!</p>
+        <p id='err'></p>
+
+        <hr />
+        <p id="logs">Please wait...</p>
     </div>
+    
+
 
     <script>
-        const pc = new RTCPeerConnection({
-        iceServers: [
+
+        window.onload = () => {
+            log('🔴 sdpOffer: Please wait...');
+        };
+
+        const Ice = document.getElementById('ice');
+        const IP = document.getElementById('ip');
+        const Stun = document.getElementById('stun');
+        const Turn = document.getElementById('turn');
+        const Err = document.getElementById('err');
+
+        const iceServers = [
             {
-            urls: 'stun:stun.l.google.com:19302'
-            }
-        ]
+                urls: 'stun:stun.l.google.com:19302',
+            },
+            {
+                urls: "turn:68.183.156.88:3478",
+                username: "webrtcwire",
+                credential: "kLddkeokdkuyewertYYEKgqWWWSbv",
+            },
+        ];
+
+        
+        Ice.innerHTML = JSON.stringify(iceServers, null, 4);
+
+
+        const pc = new RTCPeerConnection({
+            iceServers
         });
 
         const log = msg => {
-        document.getElementById('logs').innerHTML = msg + '<br>';
-        };
-
-        // Show "Please wait..." message on page load
-        window.onload = () => {
-            log('Please wait...');
+            document.getElementById('logs').innerHTML = msg + '<br>';
         };
 
         navigator.mediaDevices.getUserMedia({ video: true, audio: true })
@@ -78,52 +110,74 @@
         })
         .catch(log);
 
-        pc.oniceconnectionstatechange = e => log(pc.iceConnectionState);
-
-        pc.onicecandidate = event => {
-            if (event.candidate === null) {
-                document.getElementById('localSessionDescription').value = btoa(JSON.stringify(pc.localDescription));
-                log('SDP offer ready');
+        pc.oniceconnectionstatechange = (e) => {
+            if (pc.iceConnectionState === 'connected') {
+                log('🟢 ' + pc.iceConnectionState);
+            } else {
+                log('🔴 ' + pc.iceConnectionState);
             }
+        }
+
+        pc.onicecandidate = (e) => {
+           
+            if (e.candidate === null) {
+                document.getElementById('sdpOffer').value = btoa(JSON.stringify(pc.localDescription));
+                log('🟢 sdpOffer: ready');
+            }
+
+            if (!e.candidate) return;
+
+            console.log(e.candidate.candidate);
+
+            // If a srflx candidate was found, notify that the STUN server works!
+            if (e.candidate.type == 'srflx' || e.candidate.candidate.includes('srflx')) {
+                let ip = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/;
+                let address = e.candidate.address 
+                    ? e.candidate.address 
+                    : e.candidate.candidate.match(ip);
+                IP.innerHTML = '🟢 Your Public IP Address is ' + address;
+                Stun.innerHTML = '🟢 The STUN server is reachable!';
+            }
+
+            // If a relay candidate was found, notify that the TURN server works!
+            if (e.candidate.type == 'relay' || e.candidate.candidate.includes('relay')) {
+                Turn.innerHTML = '🟢 The TURN server is reachable!';
+            } 
         };
 
-        pc.ontrack = function(event) {
-        const el = document.createElement(event.track.kind);
-        el.srcObject = event.streams[0];
-        el.autoplay = true;
-        el.controls = true;
+        // handle error
+        pc.onicecandidateerror = (e) => {
+            log('🔴 Error: ' + e.errorText);
+            console.error(e);
+            Err.innerHTML = '🔴 Error: ' + e.errorText;
+        };
 
-        document.getElementById('remoteVideos').appendChild(el);
+        pc.ontrack = function(e) {
+            const el = document.createElement(e.track.kind);
+            el.srcObject = e.streams[0];
+            el.autoplay = true;
+            el.controls = false;
+
+            document.getElementById('remoteVideos').appendChild(el);
+            log('🟢 ' + pc.iceConnectionState + ' : on video call');
         };
 
         function startSession() {
-        const sd = document.getElementById('remoteSessionDescription').value;
-        if (sd === '') {
-            return alert('Session Description must not be empty');
+            const sdpAnswer = document.getElementById('sdpAnswer').value;
+            if (sdpAnswer === '') {
+                return alert('Remote SDP a must not be empty');
+            }
+
+            try {
+                pc.setRemoteDescription(JSON.parse(atob(sdpAnswer)));
+            } catch (e) {
+                alert(e);
+            }
         }
 
-        try {
-            pc.setRemoteDescription(JSON.parse(atob(sd)));
-        } catch (e) {
-            alert(e);
-        }
-        }
-
-        function copySDP() {
-        const browserSDP = document.getElementById('localSessionDescription');
-
-        browserSDP.focus();
-        browserSDP.select();
-
-        try {
-            const successful = document.execCommand('copy');
-            const msg = successful ? 'successful' : 'unsuccessful';
-            log('Copying SDP was ' + msg);
-        } catch (err) {
-            log('Unable to copy SDP ' + err);
-        }
-        }
+        
+        //pc.createOffer().then(offer => pc.setLocalDescription(offer));
     </script>
-
 </body>
+
 </html>

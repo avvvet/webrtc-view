@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebRTC Demo</title>
+<style>
+    h1 {
+        color: blue;
+        font-family: verdana;
+        font-size: 300%;
+    }
+    body {
+        background : #99e1d9;
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+    }
+    #container {
+        text-align: center;
+        padding: 40px;
+    }
+    textarea {
+        width: 100%;
+        min-height: 75px;
+        margin: 5px
+    }
+</style>
+</head>
+<body>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>webrtc wire</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+    <style>
+        h1 {
+            color: blue;
+            font-family: verdana;
+            font-size: 300%;
+        }
+        body {
+            background : #99e1d9;
+            margin: 0;
+            padding: 0;
+        }
+        .cs-1 {
+            background: #99e1d9;;
+            padding: 5px;
+            margin: 5px;
+            border-style: solid;
+            border-width: 1px;
+            border-color: #e5e5e5;
+            border-radius: 5px
+        }
+        
+    </style>
+</head>
+    <body>
+        <nav class="navbar bg-body-tertiary">
+            <div class="container">
+                <img src="" alt="" width="30" class="rounded">
+                webrtc wiring 
+            </div>
+        </nav>
+
+        <div class="container-sm">
+            <div class="row gx-10 was-validated">
+                <div class="col cs-1">
+                    <!-- left col   -->
+                    <div class="text-center">
+                       <video id="selfVideo" class="rounded"  autoplay muted></video>
+                    </div>
+                    
+                </div>
+                <div class="col cs-1">
+                    <!-- right col   -->
+                    <div for="remoteVideos">Remote Videos:</div>
+                    <div id="remoteVideos"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container-sm">
+            <div class="row gx-10 was-validated">
+                <div class="col cs-1">
+                    <!-- left col   -->
+                    <!-- SDP offer -->
+                    <div for="localSessionDescription">SDP Offer:</div>
+                    <textarea id="localSessionDescription" readonly="true"></textarea>
+                    
+                </div>
+                <div class="col cs-1">
+                    <!-- right col   -->
+                    <div for="remoteSessionDescription">SDP Answer:</div>
+                    <textarea id="remoteSessionDescription"></textarea>
+                    <div class="mb-3d mt-3 text-center">
+                        <button type="button" onclick="startSession()" class="btn btn-dark btn-lg" id="btn-download">Connect</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container-sm">
+            <div class="row gx-10 was-validated">
+                <div id="logs">Please wait...</div>
+            </div>
+        </div>
+        
+
+        <!-- Footer -->
+        <footer class="fixed-bottom">
+            <!-- Copyright -->
+            <div class="text-center p-4" style="background-color: rgba(0, 0, 0, 0.05);">
+                webrtc wiring 
+                <img src="" alt="" width="30" class="rounded">
+            </div>
+            <!-- Copyright -->
+        </footer>
+        <!-- Footer -->
+
+    <script>
+        const pc = new RTCPeerConnection({
+            iceServers: [
+                {
+                urls: 'stun:stun.l.google.com:19302'
+                }
+            ]
+        });
+
+        const log = msg => {
+            document.getElementById('logs').innerHTML = msg + '<br>';
+        };
+
+        // Show "Please wait..." message on page load
+        window.onload = () => {
+            log('Please wait...');
+        };
+
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(stream => {
+
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+            pc.createOffer().then(d => pc.setLocalDescription(d)).catch(log);
+
+            document.getElementById('selfVideo').srcObject = stream
+        })
+        .catch(log);
+
+        pc.oniceconnectionstatechange = e => log(pc.iceConnectionState);
+
+        pc.onicecandidate = event => {
+            if (event.candidate === null) {
+                document.getElementById('localSessionDescription').value = btoa(JSON.stringify(pc.localDescription));
+                log('SDP offer ready');
+            }
+        };
+
+        pc.ontrack = function(event) {
+            const el = document.createElement(event.track.kind);
+            el.srcObject = event.streams[0];
+            el.autoplay = true;
+            el.controls = false;
+
+            document.getElementById('remoteVideos').appendChild(el);
+        };
+
+        function startSession() {
+            const sd = document.getElementById('remoteSessionDescription').value;
+            if (sd === '') {
+                return alert('Session Description must not be empty');
+            }
+
+            try {
+                pc.setRemoteDescription(JSON.parse(atob(sd)));
+            } catch (e) {
+                alert(e);
+            }
+        }
+
+    </script>
+
+</body>
+</html>
